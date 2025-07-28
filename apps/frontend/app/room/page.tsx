@@ -3,9 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function Room(){
-
     const router=useRouter();
-
      const[action,setAction]=useState("");
      const [slug,setSlug]=useState("");
      const [message,setMessage]=useState("");
