@@ -1,10 +1,10 @@
 import { useRef, useEffect, useState } from "react";
 
 import { IconButton } from "./IconButton";
-import { Circle, Pencil, RectangleHorizontalIcon } from "lucide-react";
+import { Circle, Eraser, LineChart, Minus, Pencil, RectangleHorizontalIcon } from "lucide-react";
 import { Game } from "@/draw/Game";
 
-type Tool="circle" | "rect" | "pencil";
+type Tool="circle" | "rect" | "pencil" | "line" | "eraser";
 
 export default function Canvas({roomId,socket}:{
     roomId: string;
@@ -44,7 +44,6 @@ export default function Canvas({roomId,socket}:{
                       <Topbar selectedTool={selectedTool} setSelectedTool={setSelectedTool} game={game}></Topbar>
             </div>
             
-
 }
 
 
@@ -54,7 +53,7 @@ function Topbar({selectedTool, setSelectedTool,game}: {
     game:Game | undefined
 }) {
     return <div className="fixed top-2 left-1/2 -translate-x-1/2 z-10">
-            <div className="flex">
+            <div className="flex gap-x-0.10">
                 <IconButton 
                     onClick={() => {
                         setSelectedTool("pencil")
@@ -71,6 +70,15 @@ function Topbar({selectedTool, setSelectedTool,game}: {
                     setSelectedTool("circle")
                     game?.setTool("circle");
                 }} activated={selectedTool === "circle"} icon={<Circle />}></IconButton>
+                <IconButton onClick={() => {
+                    setSelectedTool("line")
+                    game?.setTool("line");
+                }} activated={selectedTool === "line"} icon={<Minus />}></IconButton>
+                <IconButton onClick={()=>{
+                      setSelectedTool("eraser")
+                      game?.setTool("eraser");
+                }} activated={selectedTool==="eraser"} icon={<Eraser></Eraser>}></IconButton>
+
             </div>
         </div>
 }

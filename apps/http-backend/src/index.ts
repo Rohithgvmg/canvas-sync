@@ -28,11 +28,13 @@ app.post("/signup", async(req, res) => {
                }
             });
            res.json({
+               success:true,
           message: "User created successfully",
           userId: new_user.id
      })
      }catch (e) {
                  res.json({
+                    success:false,
                message:"Error creating user, probably user with same email already exists",
                error:e
           })
@@ -43,6 +45,7 @@ app.post("/signin",async (req,res)=>{
            const parsedData=SigninSchema.safeParse(req.body);
                if (!parsedData.success) {
                res.status(400).json({
+                    success:"false",
                     message: "Invalid inputs"
                });
                return;
@@ -64,6 +67,7 @@ app.post("/signin",async (req,res)=>{
 
          if(!user){
           res.json({
+               success:"false",
                message:"User not found, try signing up"
           })
           return;
@@ -75,6 +79,7 @@ app.post("/signin",async (req,res)=>{
 
 
          res.json({
+               success:"true",
                message: "User signed in successfully",
                token: token
            })
@@ -112,12 +117,14 @@ app.post("/create-room",middleware,async(req:requestType,res)=>{
          }
     })
            res.json({
+               success:true,
                 roomId:room.id,
                 slug: room.slug,
                 message: "Room created successfully"
            })
      } catch(e){
           res.status(500).json({
+               success:false,
                message: "Error creating room,probably room with same slug already exists",
                error: e
           })

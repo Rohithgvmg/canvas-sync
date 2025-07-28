@@ -1,5 +1,5 @@
 {
-  "name": "whiteboard",
+  "name": "canvas-sync",
   "private": true,
   "scripts": {
     "build": "turbo run build",
