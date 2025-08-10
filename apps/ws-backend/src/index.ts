@@ -107,7 +107,42 @@ wss.on("connection", (ws,request) => {
                           }
                      })
             
-               }
+               } else if (parsedData.type === 'shape-delete') {
+                    const { id } = JSON.parse(parsedData.message);
+                    const roomId = parsedData.roomId;
+                    const message = parsedData.message;
+                    try {
+                       // whatever user sending id is not chat id created by db, but id in message cell
+                       // u need to find the record where id is present in message cell
+                       // then delete that record
+                        const chatRecord = await prismaClient.chat.findFirst({
+            where: {
+                roomId: parseInt(roomId),
+                message: {
+                    contains: id
+                }
+            }
+        });
+
+        //  If we found the record, delete it using its own numeric ID.
+        if (chatRecord) {
+            await prismaClient.chat.delete({
+                where: {
+                    id: chatRecord.id // Use the numeric ID from the record we found
+                }
+            });
+
+
+             users.forEach(user => {
+                          if(user.rooms.includes(roomId)) {
+                                user.ws.send(JSON.stringify({ type: "shape-delete", roomId, message, userId }));
+                          }
+                     })
+
+        }} catch (error) {
+            console.error("Failed to delete shape:", error);
+        }
+    }
           }
 
   });

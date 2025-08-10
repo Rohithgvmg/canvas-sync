@@ -1,23 +1,27 @@
 import { getExistingShapes } from "./http";
 
 type Shape = {
+    id:string;
     type:"rect";
     x: number;
     y: number;
     width: number;
     height: number;
 } | {
+    id:string;
     type:"circle";
     centerX: number;
     centerY: number;
     radius: number;
 } | {
+    id:string;
     type:"line";
     startX: number;
     startY: number;
     endX: number;
     endY: number;
 } | {
+    id:string;
     type:"pencil";
     path:{x:number;y:number}[];
 }
@@ -76,8 +80,62 @@ export class Game{
                             this.clearCanvas();
                             // if external message of some shape comes, it adds it to existing shapes array and repaints everything
                      }
+
+                      if (message.type === 'shape-delete') {
+                const { id } = JSON.parse(message.message);
+                this.existingShapes = this.existingShapes.filter(shape => shape.id !== id);
+                this.clearCanvas();
+            }
                     }
        }
+
+       private pointToLineSegmentDistance(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+        const l2 = (x1 - x2) ** 2 + (y1 - y2) ** 2;
+        if (l2 === 0) return Math.sqrt((px - x1) ** 2 + (py - y1) ** 2);
+        let t = ((px - x1) * (x2 - x1) + (py - y1) * (y2 - y1)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        const nearestX = x1 + t * (x2 - x1);
+        const nearestY = y1 + t * (y2 - y1);
+        return Math.sqrt((px - nearestX) ** 2 + (py - nearestY) ** 2);
+    }
+        
+
+    private getShapeAtPosition(x: number, y: number): Shape | undefined {
+      
+        for (let i = this.existingShapes.length - 1; i >= 0; i--) {
+            const shape = this.existingShapes[i];
+            const tolerance = 5; 
+            let hit = false;
+
+            if (shape.type === 'rect') {
+                hit = (x >= shape.x && x <= shape.x + shape.width && y >= shape.y && y <= shape.y + shape.height);
+            } else if (shape.type === 'circle') {
+                const distance = Math.sqrt((x - shape.centerX) ** 2 + (y - shape.centerY) ** 2);
+                hit = distance <= shape.radius;
+            } else if (shape.type === 'line') {
+                hit = this.pointToLineSegmentDistance(x, y, shape.startX, shape.startY, shape.endX, shape.endY) < tolerance;
+            } else if (shape.type === 'pencil') {
+                for (let j = 0; j < shape.path.length - 1; j++) {
+                    if (this.pointToLineSegmentDistance(x, y, shape.path[j].x, shape.path[j].y, shape.path[j + 1].x, shape.path[j + 1].y) < tolerance) {
+                        hit = true;
+                        break;
+                    }
+                }
+            }
+            if (hit) return shape;
+        }
+        return undefined;
+    }
+
+     private deleteShape(shapeId: string) {
+        this.existingShapes = this.existingShapes.filter(s => s.id !== shapeId);
+        this.socket.send(JSON.stringify({
+            type: 'shape-delete', 
+            roomId: this.roomId,
+            message: JSON.stringify({ id: shapeId })
+        }));
+        this.clearCanvas();
+    }
 
        clearCanvas(){
                this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
@@ -129,10 +187,12 @@ export class Game{
                         const width=e.clientX-this.startX;
                         const height=e.clientY-this.startY;
                         let shape:Shape | null=null;
+                         const newId = `${Date.now()}-${Math.random()}`;
                         //@ts-ignore
                         const selectedTool=this.selectedTool;
                         if(selectedTool=="rect"){
                                 shape={
+                            id:newId,
                             type:"rect",
                             x:this.startX,
                             y:this.startY,
@@ -145,6 +205,7 @@ export class Game{
                             let centerX=(this.startX + e.clientX) / 2;
                             let centerY=(this.startY + e.clientY) / 2;
                             shape={
+                                id:newId,
                                 type:"circle",
                                 radius,
                                 centerX,
@@ -152,6 +213,7 @@ export class Game{
                             }
                         } else if(selectedTool=="line"){
                                shape={
+                                id:newId,
                                     type:"line",
                                     startX:this.startX,
                                     startY:this.startY,
@@ -162,6 +224,7 @@ export class Game{
                             this.ctx.closePath();
                                if(this.path.length>1){
                                    shape={
+                                       id:newId,
                                         type:"pencil",
                                         path:this.path
                                    }
@@ -188,14 +251,28 @@ export class Game{
          mousemoveHandler=(e:any)=>{
                     if(this.clicked){
                             //  console.log(e.clientX+" "+e.clientY);
-                        const width=e.clientX-this.startX;
-                        const height=e.clientY-this.startY;
+
+                            if (this.selectedTool === 'eraser') {
+                         const shapeToDelete = this.getShapeAtPosition(e.clientX, e.clientY);
+                        if (shapeToDelete) {
+                              this.deleteShape(shapeToDelete.id);
+                        }
+                         return; 
+                         }
+
+
+                       
                         if (this.selectedTool !== "pencil") {
                           this.clearCanvas(); 
-}
+                        }
+                         const width=e.clientX-this.startX;
+                        const height=e.clientY-this.startY;
                         this.ctx.strokeStyle="rgba(255,255,255)";
                         //@ts-ignore
                         const selectedTool=this.selectedTool;
+
+                        
+
                         if(selectedTool === "rect"){
                                 this.ctx.strokeRect(this.startX,this.startY,width,height);
                         }else if(selectedTool === "circle"){
